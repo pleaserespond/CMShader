@@ -1,4 +1,4 @@
-Shader "CMShader"
+Shader "CMShader/Transparent"
 {
 	Properties
 	{
@@ -15,17 +15,15 @@ Shader "CMShader"
 		[NoScaleOffset] _HiTex ("Hilight (RGB)", 2D) = "white" {}
 		_HiRate ("Hilight Rate", Range(0, 1)) = 0
 		_HiPow ("Hilight Pow", Range(0, 50)) = 0
-		_OutlineColor ("Outline Color", Color) = (0,0,0,1)
-		[NoScaleOffset] _OutlineTex ("Outline Texture(RGB)", 2D) = "grey" {}
-		[NoScaleOffset] _OutlineToonRamp ("Outline Toon Ramp (RGB)", 2D) = "white" {}
-		_OutlineWidth ("Outline width", Range(0, 0.003)) = 0.0016
+		_AlphaSharp ("Alpha sharp", Range(0, 1)) = 0
 	}
 
 	SubShader
 	{
 		Tags
 		{
-			"RenderType" = "Opaque"
+			"QUEUE" = "Transparent"
+			"RenderType" = "Transparent"
 		}
 
 		CGINCLUDE
@@ -38,42 +36,11 @@ Shader "CMShader"
 			#pragma multi_compile_fwdadd_fullshadows
 		#endif
 
+		#define _ALPHABLEND_ON 1
 		#pragma only_renderers d3d11 glcore gles
 		#pragma target 4.0
 		#include "cg/main.cginc"
 		ENDCG
-
-		Pass
-		{
-			Name "OUTLINE"
-			Tags { "LIGHTMODE" = "FORWARDBASE" }
-
-			Blend Off
-			ZWrite On
-			ZClip Off
-			Cull Front
-
-			CGPROGRAM
-			#pragma vertex vertOutline
-			#pragma fragment fragOutlineBase
-			ENDCG
-		}
-
-		Pass
-		{
-			Name "OUTLINE"
-			Tags { "LIGHTMODE" = "FORWARDADD" }
-
-			Blend One One, One One
-			ZWrite On
-			ZClip Off
-			Cull Front
-
-			CGPROGRAM
-			#pragma vertex vertOutline
-			#pragma fragment fragOutlineAdd
-			ENDCG
-		}
 
 		//*
 		Pass
@@ -82,9 +49,10 @@ Shader "CMShader"
 			Name "FORWARD"
 			Tags { "LIGHTMODE" = "FORWARDBASE" }
 
-			Blend Off
-			ZWrite On
-			Cull Back
+			Blend SrcAlpha OneMinusSrcAlpha
+			ColorMask RGB -1
+			ZClip Off
+			ZWrite Off
 
 			CGPROGRAM
 			#pragma vertex vert
@@ -93,14 +61,16 @@ Shader "CMShader"
 		}
 		// */
 
-		/*
+		//*
 		Pass
 		{
 			Name "FORWARD"
 			Tags { "LIGHTMODE" = "FORWARDADD" }
-			Blend One One
-			BlendOp Add
-			Cull Back
+
+			Blend SrcAlpha One
+			ColorMask RGB -1
+			ZClip Off
+			ZWrite Off
 
 			CGPROGRAM
 			#pragma vertex vert

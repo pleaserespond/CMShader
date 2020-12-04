@@ -37,6 +37,10 @@ sampler2D _OutlineTex;
 sampler2D _OutlineToonRamp;
 float _OutlineWidth;
 
+#if _ALPHABLEND_ON
+float _AlphaSharp;
+#endif
+
 CBUFFER_END
 
 
@@ -125,7 +129,7 @@ inline half4 VertexGIForward(appdata_full v, float3 posWorld, half3 normalWorld)
 
 VertexOutput vert(appdata_full v)
 {
-	VertexOutput o;
+	VertexOutput o = (VertexOutput)0;
 	o.pos = UnityObjectToClipPos(v.vertex);
 	o.tex = v.texcoord;
 
@@ -209,6 +213,14 @@ inline DasFragmentData dasFragmentSetup(const float2 i_tex, const half3 i_eyeVec
 
 #if defined(_ALPHATEST_ON)
 	clip (diffuse.a - _Cutoff);
+#endif
+
+#if _ALPHABLEND_ON
+	if (_AlphaSharp > 0) {
+		float a = diffuse.a;
+		a = a + _AlphaSharp * a - _AlphaSharp * a * a;
+		diffuse.a = a;
+	}
 #endif
 
 #if defined(_ALPHADITHERTEST_ON)
