@@ -93,7 +93,7 @@ Shader "CMShader/Basic"
 		}
 		// */
 
-		/*
+		//*
 		Pass
 		{
 			Name "FORWARD"

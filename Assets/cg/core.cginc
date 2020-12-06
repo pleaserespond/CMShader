@@ -161,7 +161,7 @@ VertexOutputOutline vertOutline(appdata_full v)
 	o.pos = UnityObjectToClipPos(v.vertex);
 	o.tex = v.texcoord;
 	o.normalWorld = UnityObjectToWorldNormal(v.normal);
-	const float fuck = 7;
+	const float fuck = 1.5;
 	const float normalOffset=_OutlineWidth*fuck*clamp(o.pos.w, 0.01, 2);
 	float3 nv=mul((float3x3)UNITY_MATRIX_VP, o.normalWorld);
 	o.pos.xyz += normalOffset*nv;
@@ -259,7 +259,7 @@ inline DasFragmentData dasFragmentSetupOutline(const float2 i_tex, const half3 i
 	DasFragmentData o = (DasFragmentData)0;
 	o.diffColor = color;
 	o.shadowColor = color;
-	o.normalWorld = PerPixelWorldNormal(float4(i_tex, 0, 1), tangentToWorld);
+	o.normalWorld = -PerPixelWorldNormal(float4(i_tex, 0, 1), tangentToWorld);
 	o.eyeVec = NormalizePerPixelNormal(i_eyeVec);
 	o.posWorld = i_posWorld;
 	return o;
@@ -459,7 +459,7 @@ inline half4 BRDFEvalOutline(half atten, half occlusion, const DasFragmentData s
 
 	return half4(
 		diffuse + specular + colorWithRim * gi.diffuse * occlusion,
-		s.diffColor.a
+		1
 	);
 }
 
@@ -470,7 +470,6 @@ inline half4 BRDFEvalOutline(half atten, half occlusion, const DasFragmentData s
 
 half4 fragOutlineBase(VertexOutput i) : SV_TARGET
 {
-	return half4(0, 0, 0, 1);
 #if DEBUG_UNITY_MATERIAL
 	discard;
 #endif
@@ -484,7 +483,10 @@ half4 fragOutlineBase(VertexOutput i) : SV_TARGET
 	half occlusion = Occlusion(i.tex.xy);
 	DasGI gi = dasFragmentGI(s, i.ambientOrLightmapUV, mainLight);
 	half4 c = BRDFEvalOutline(atten, occlusion, s, gi.light, gi.indirect);
-	return half4(0, 0, 0, 1);
+	c.rgb += Emission(i.tex.xy);
+	UNITY_APPLY_FOG(i.fogCoord, c.rgb);
+	// No OutputForward because outline is only on for variants without transparency
+	return c;
 }
 
 half4 fragOutlineAdd(VertexOutput i) : SV_TARGET
@@ -492,7 +494,13 @@ half4 fragOutlineAdd(VertexOutput i) : SV_TARGET
 #if DEBUG_UNITY_MATERIAL
 	discard;
 #endif
-	return half4(0, 0, 0, 0);
+	DasFragmentData s = dasFragmentSetupOutline(i.tex, vo_eyeVec(i), i.tangentToWorldAndPackedData, i.posWorld.xyz);
+	UNITY_LIGHT_ATTENUATION(atten, i, s.posWorld)
+	UnityLight light = AdditiveLight (UnityWorldSpaceLightDir(s.posWorld), 1);
+	UnityIndirect noIndirect = ZeroIndirect();
+	half4 c = BRDFEvalOutline(atten, 1.0, s, light, noIndirect);
+	UNITY_APPLY_FOG_COLOR(i.fogCoord, c.rgb, half4(0,0,0,0)); // fog towards black in additive pass
+	return c;
 }
 
 half4 fragBase(VertexOutput i) : SV_Target
