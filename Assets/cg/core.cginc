@@ -37,6 +37,8 @@ sampler2D _OutlineTex;
 sampler2D _OutlineToonRamp;
 float _OutlineWidth;
 
+int _Disabled;
+
 #if _ALPHABLEND_ON
 float _AlphaSharp;
 #endif
@@ -130,6 +132,10 @@ inline half4 VertexGIForward(appdata_full v, float3 posWorld, half3 normalWorld)
 VertexOutput vert(appdata_full v)
 {
 	VertexOutput o = (VertexOutput)0;
+	if (_Disabled) {
+		o.pos.w = 1;
+		return o;
+	}
 	o.pos = UnityObjectToClipPos(v.vertex);
 	o.tex = v.texcoord;
 
@@ -154,7 +160,7 @@ VertexOutput vert(appdata_full v)
 VertexOutputOutline vertOutline(appdata_full v)
 {
 	VertexOutputOutline o = (VertexOutputOutline)0;
-	if (_OutlineWidth == 0) {
+	if (_Disabled || _OutlineWidth == 0) {
 		o.pos.w = 1;
 		return o;
 	}
@@ -162,7 +168,7 @@ VertexOutputOutline vertOutline(appdata_full v)
 	o.tex = v.texcoord;
 	o.normalWorld = UnityObjectToWorldNormal(v.normal);
 	const float fuck = 1.5;
-	const float normalOffset=_OutlineWidth*fuck*clamp(o.pos.w, 0.01, 2);
+	const float normalOffset=_OutlineWidth;//*fuck*clamp(o.pos.w, 0.01, 2);
 	float3 nv=mul((float3x3)UNITY_MATRIX_VP, o.normalWorld);
 	o.pos.xyz += normalOffset*nv;
 	o.posWorld = mul(unity_ObjectToWorld, v.vertex);
@@ -250,16 +256,10 @@ inline DasFragmentData dasFragmentSetupOutline(const float2 i_tex, const half3 i
 	float2 uv = i_tex.xy * _MainTex_ST.xy + _MainTex_ST.zw;
 	half4 color = half4(lerp(tex2D(_OutlineTex, uv).rgb, _OutlineColor.rgb, _OutlineColor.a), 1);
 
-#if defined(_ALPHAPREMULTIPLY_ON)
-	// NOTE: shader relies on pre-multiply alpha-blend (_SrcBlend = One, _DstBlend = OneMinusSrcAlpha)
-	// Transparency 'removes' from Diffuse component
-	color.rgb *= color.a;
-#endif
-
 	DasFragmentData o = (DasFragmentData)0;
 	o.diffColor = color;
 	o.shadowColor = color;
-	o.normalWorld = -PerPixelWorldNormal(float4(i_tex, 0, 1), tangentToWorld);
+	o.normalWorld = PerPixelWorldNormal(float4(i_tex, 0, 1), tangentToWorld);
 	o.eyeVec = NormalizePerPixelNormal(i_eyeVec);
 	o.posWorld = i_posWorld;
 	return o;

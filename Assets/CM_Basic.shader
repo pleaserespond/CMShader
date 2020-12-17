@@ -2,10 +2,10 @@ Shader "CMShader/Basic"
 {
 	Properties
 	{
-		_Color ("Main Color", Color) = (0.5,0.5,0.5,1)
+		[HDR]_Color ("Main Color", Color) = (1,1,1,1)
 		_MainTex ("Base (RGB)", 2D) = "white" {}
 		[NoScaleOffset] _ShadowTex ("Shadow Texture(RGBA)", 2D) = "white" {}
-		[NoScaleOffset] _ToonRamp ("Toon Ramp (RGB)", 2D) = "gray" {}
+		[NoScaleOffset] _ToonRamp ("Toon Ramp (RGB)", 2D) = "white" {}
 		[NoScaleOffset] _ShadowRateToon ("Shadow Rate Toon (RGB)", 2D) = "white" {}
 		[NoScaleOffset] _BumpMap ("Normal Map (RGB)", 2D) = "bump" {}
 		_RimColor ("Rim Color", Color) = (0,0,1)
@@ -16,9 +16,10 @@ Shader "CMShader/Basic"
 		_HiRate ("Hilight Rate", Range(0, 1)) = 0
 		_HiPow ("Hilight Pow", Range(0, 50)) = 0
 		_OutlineColor ("Outline Color", Color) = (0,0,0,1)
-		[NoScaleOffset] _OutlineTex ("Outline Texture(RGB)", 2D) = "grey" {}
+		[NoScaleOffset] _OutlineTex ("Outline Texture(RGB)", 2D) = "white" {}
 		[NoScaleOffset] _OutlineToonRamp ("Outline Toon Ramp (RGB)", 2D) = "white" {}
 		_OutlineWidth ("Outline width", Range(0, 0.003)) = 0.0016
+		_Disabled ("Disabled", Int) = 0
 	}
 
 	SubShader
@@ -43,38 +44,6 @@ Shader "CMShader/Basic"
 		#include "cg/main.cginc"
 		ENDCG
 
-		Pass
-		{
-			Name "OUTLINE"
-			Tags { "LIGHTMODE" = "FORWARDBASE" }
-
-			Blend Off
-			ZWrite On
-			ZClip Off
-			Cull Front
-
-			CGPROGRAM
-			#pragma vertex vertOutline
-			#pragma fragment fragOutlineBase
-			ENDCG
-		}
-
-		Pass
-		{
-			Name "OUTLINE"
-			Tags { "LIGHTMODE" = "FORWARDADD" }
-
-			Blend One One, One One
-			ZWrite On
-			ZClip Off
-			Cull Front
-
-			CGPROGRAM
-			#pragma vertex vertOutline
-			#pragma fragment fragOutlineAdd
-			ENDCG
-		}
-
 		//*
 		Pass
 		{
@@ -93,6 +62,22 @@ Shader "CMShader/Basic"
 		}
 		// */
 
+		Pass
+		{
+			Name "OUTLINE"
+			Tags { "LIGHTMODE" = "FORWARDBASE" }
+
+			Blend Off
+			ZWrite On
+			ZClip Off
+			Cull Front
+
+			CGPROGRAM
+			#pragma vertex vertOutline
+			#pragma fragment fragOutlineBase
+			ENDCG
+		}
+
 		//*
 		Pass
 		{
@@ -100,6 +85,7 @@ Shader "CMShader/Basic"
 			Tags { "LIGHTMODE" = "FORWARDADD" }
 			Blend One One
 			BlendOp Add
+			ZWrite Off
 			Cull Back
 
 			CGPROGRAM
@@ -108,6 +94,23 @@ Shader "CMShader/Basic"
 			ENDCG
 		}
 		// */
+
+		Pass
+		{
+			Name "OUTLINE"
+			Tags { "LIGHTMODE" = "FORWARDADD" }
+
+			Blend One One
+			BlendOp Add
+			ZWrite Off
+			ZClip Off
+			Cull Front
+
+			CGPROGRAM
+			#pragma vertex vertOutline
+			#pragma fragment fragOutlineAdd
+			ENDCG
+		}
 		
 		//*
 		Pass
